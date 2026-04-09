@@ -8,6 +8,7 @@ import messageRoutes from "./routes/message.routes.js";
 import userRoutes from "./routes/user.routes.js";
 
 import connectToMongoDB from "./db/connectToMongoDB.js";
+import { ensureDefaultSampleData } from "./db/defaultDataSeeder.js";
 import { app, server } from "./socket/socket.js";
 
 dotenv.config();
@@ -29,7 +30,22 @@ app.get("*", (req, res) => {
 	res.sendFile(path.join(__dirname, "frontend", "dist", "index.html"));
 });
 
-server.listen(PORT, () => {
-	connectToMongoDB();
-	console.log(`Server Running on port ${PORT}`);
-});
+const startServer = async () => {
+	try {
+		await connectToMongoDB();
+
+		if (process.env.NODE_ENV !== "production") {
+			await ensureDefaultSampleData();
+			console.log("Default sample data is ready.");
+		}
+
+		server.listen(PORT, () => {
+			console.log(`Server Running on port ${PORT}`);
+		});
+	} catch (error) {
+		console.error("Failed to start server:", error.message);
+		process.exit(1);
+	}
+};
+
+startServer();
