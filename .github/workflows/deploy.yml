@@ -18,6 +18,7 @@
 #   cd /var/www/mern-chat-app
 #   cp .env.example .env  # or create manually
 #   sudo nano /etc/nginx/sites-available/chat-app.conf
+#   sudo ln -s /etc/nginx/sites-available/chat-app.conf /etc/nginx/sites-enabled/
 
 name: Deploy Chat App to EC2
 
