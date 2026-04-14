@@ -89,7 +89,7 @@ jobs:
         run: |
           set -euo pipefail
           DEPLOY_USER="${DEPLOY_USER:-ubuntu}"
-          APP_PATH="${APP_PATH:-/var/www/mern-chat-app}"
+          APP_PATH="${APP_PATH:-/var/www/chat-app}"
           if [ -z "${DEPLOY_HOST:-}" ]; then
             echo "Missing EC2_HOST secret."
             exit 1
@@ -106,7 +106,7 @@ jobs:
             if pm2 describe mern-chat-app >/dev/null 2>&1; then
               pm2 restart mern-chat-app --update-env
             else
-              pm2 start backend/server.js --name mern-chat-app
+              pm2 start backend/server.js --name chat-app
             fi
             pm2 save
           "
