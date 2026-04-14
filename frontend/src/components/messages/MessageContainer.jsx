@@ -3,9 +3,10 @@ import useConversation from "../../zustand/useConversation";
 import MessageInput from "./MessageInput";
 import Messages from "./Messages";
 import { TiMessages } from "react-icons/ti";
+import { IoArrowBack } from "react-icons/io5";
 import { useAuthContext } from "../../context/AuthContext";
 
-const MessageContainer = () => {
+const MessageContainer = ({ className = "" }) => {
 	const { selectedConversation, setSelectedConversation } = useConversation();
 
 	useEffect(() => {
@@ -14,13 +15,21 @@ const MessageContainer = () => {
 	}, [setSelectedConversation]);
 
 	return (
-		<div className='md:min-w-[450px] flex flex-col'>
+		<div className={`w-full min-w-0 md:min-w-[450px] flex flex-col ${className}`}>
 			{!selectedConversation ? (
 				<NoChatSelected />
 			) : (
 				<>
 					{/* Header */}
-					<div className='bg-slate-500 px-4 py-2 mb-2'>
+					<div className='bg-slate-500 px-4 py-2 mb-2 flex items-center gap-2'>
+						<button
+							type='button'
+							className='btn btn-ghost btn-sm btn-circle sm:hidden'
+							onClick={() => setSelectedConversation(null)}
+							aria-label='Back to conversation list'
+						>
+							<IoArrowBack className='text-lg' />
+						</button>
 						<span className='label-text'>To:</span>{" "}
 						<span className='text-gray-900 font-bold'>{selectedConversation.fullName}</span>
 					</div>
