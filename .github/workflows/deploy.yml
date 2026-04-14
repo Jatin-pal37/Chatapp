@@ -66,7 +66,7 @@ jobs:
         run: |
           set -euo pipefail
           DEPLOY_USER="${DEPLOY_USER:-ubuntu}"
-          APP_PATH="${APP_PATH:-/var/www/mern-chat-app}"
+          APP_PATH="${APP_PATH:-/var/www/chat-app}"
           if [ -z "${DEPLOY_HOST:-}" ]; then
             echo "Missing EC2_HOST secret."
             exit 1
