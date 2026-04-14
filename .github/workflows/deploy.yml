@@ -1,38 +1,9 @@
-# Deploy MERN chat app to EC2 using SSH + PM2.
-#
-# Repository secrets (Settings -> Secrets and variables -> Actions):
-#   EC2_HOST        - public IPv4/DNS of the instance
-#   EC2_USERNAME    - optional SSH user (defaults to ubuntu)
-#   EC2_SSH_KEY     - full PEM private key for that user
-#   EC2_APP_PATH    - optional target app directory on server
-#
-# Server requirements:
-# - Node.js + npm installed
-# - PM2 installed globally (npm i -g pm2)
-# - MongoDB reachable from server (MONGO_DB_URI in server .env)
-# - .env present in the app directory with:
-#   PORT, MONGO_DB_URI, JWT_SECRET, NODE_ENV=production
-#
-# First-time setup example on EC2:
-#   mkdir -p /var/www/mern-chat-app
-#   cd /var/www/mern-chat-app
-#   cp .env.example .env  # or create manually
-#   sudo nano /etc/nginx/sites-available/chat-app.conf
-#   sudo ln -s /etc/nginx/sites-available/chat-app.conf /etc/nginx/sites-enabled/
-
 name: Deploy Chat App to EC2
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
-
-concurrency:
-  group: deploy-ec2-${{ github.ref }}
-  cancel-in-progress: true
-
-permissions:
-  contents: read
 
 jobs:
   build-and-deploy:
@@ -47,10 +18,10 @@ jobs:
           node-version: "lts/*"
           cache: npm
 
-      - name: Install dependencies
+      - name: Install local dependencies
         run: npm ci
 
-      - name: Build
+      - name: Build local (checks for errors)
         run: npm run build
 
       - name: Start ssh-agent
@@ -61,17 +32,12 @@ jobs:
       - name: Sync app source to EC2
         env:
           DEPLOY_HOST: ${{ secrets.EC2_HOST }}
-          DEPLOY_USER: ${{ secrets.EC2_USERNAME }}
-          APP_PATH: ${{ secrets.EC2_APP_PATH }}
+          DEPLOY_USER: ubuntu
+          # Hardcoding the path to ensure it matches your manual fix
+          APP_PATH: /var/www/chat-app 
         run: |
           set -euo pipefail
-          DEPLOY_USER="${DEPLOY_USER:-ubuntu}"
-          APP_PATH="${APP_PATH:-/var/www/chat-app}"
-          if [ -z "${DEPLOY_HOST:-}" ]; then
-            echo "Missing EC2_HOST secret."
-            exit 1
-          fi
-
+          # Using --rsync-path="sudo rsync" forces the server to accept files even if root-owned
           rsync -avz --delete \
             --exclude ".git" \
             --exclude ".github" \
@@ -79,34 +45,31 @@ jobs:
             --exclude "frontend/node_modules" \
             --exclude ".env" \
             -e "ssh -o StrictHostKeyChecking=accept-new" \
+            --rsync-path="sudo rsync" \
             ./ "${DEPLOY_USER}@${DEPLOY_HOST}:${APP_PATH}/"
 
       - name: Install and restart on EC2
         env:
           DEPLOY_HOST: ${{ secrets.EC2_HOST }}
-          DEPLOY_USER: ${{ secrets.EC2_USERNAME }}
-          APP_PATH: ${{ secrets.EC2_APP_PATH }}
+          DEPLOY_USER: ubuntu
+          APP_PATH: /var/www/chat-app
         run: |
           set -euo pipefail
-          DEPLOY_USER="${DEPLOY_USER:-ubuntu}"
-          APP_PATH="${APP_PATH:-/var/www/chat-app}"
-          if [ -z "${DEPLOY_HOST:-}" ]; then
-            echo "Missing EC2_HOST secret."
-            exit 1
-          fi
-
           ssh -o StrictHostKeyChecking=accept-new "${DEPLOY_USER}@${DEPLOY_HOST}" "
             set -euo pipefail
             cd '${APP_PATH}'
 
-            npm ci --omit=dev
-            npm ci --prefix frontend
-            npm run build --prefix frontend
+            # Install and Build
+            sudo npm ci --omit=dev
+            sudo npm ci --prefix frontend
+            sudo npm run build --prefix frontend
 
+            # PM2 management
             if pm2 describe mern-chat-app >/dev/null 2>&1; then
               pm2 restart mern-chat-app --update-env
             else
-              pm2 start backend/server.js --name chat-app
+              # Replace with your actual backend entry point
+              pm2 start backend/server.js --name mern-chat-app
             fi
             pm2 save
           "
